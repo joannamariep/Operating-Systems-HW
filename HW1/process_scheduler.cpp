@@ -154,13 +154,17 @@ struct ProcessInfo
         elapsed_processor_time = 0LL;
         elapsed_input_time = 0LL;
         elapsed_io_time = 0LL;
+
+        cpu_core_used = RESOURCE_NOT_NEEDED;
+        input_resource_used = RESOURCE_NOT_NEEDED;
+        io_resource_used = RESOURCE_NOT_NEEDED;
     }
 
     unsigned int process_id;
     unsigned long long start_time;
-    int cpu_core_used = RESOURCE_NOT_NEEDED;
-    int input_resource_used = RESOURCE_NOT_NEEDED;
-    int io_resource_used = RESOURCE_NOT_NEEDED;
+    int cpu_core_used;
+    int input_resource_used;
+    int io_resource_used;
     unsigned long long elapsed_processor_time;
     unsigned long long elapsed_input_time;
     unsigned long long elapsed_io_time;
@@ -517,7 +521,7 @@ private:
         }
 
         // Called periodically to ensure that the process state is always up-to-date
-        void UpdateProcessState(unsigned int process_id, TimelineState timeline_state, unsigned int resource_identifier)
+        void UpdateProcessState(unsigned int process_id, TimelineState timeline_state, int resource_identifier)
         {
             auto it = m_process_table.find(process_id);
             bool process_exists = it != m_process_table.end();
@@ -628,11 +632,10 @@ private:
     list<unsigned int> m_ready_queue;
     list<unsigned int> m_io_queue;
     list<unsigned int> m_input_queue;
-
-    unsigned long long m_total_length_of_timeline = 0;
+    unsigned long long m_total_length_of_timeline;
 
     // Useful debugging flags
-    bool m_initialized = false;
+    bool m_initialized;
 
     // Based on the data collected so far, this helper method, returns the amount of time
     // a ready process will have to wait until it can use a CPU core.
@@ -875,7 +878,9 @@ private:
 public:
     TimelineBuilder() :
         m_process_manager(nullptr),
-        m_resource_manager(nullptr)
+        m_resource_manager(nullptr),
+        m_total_length_of_timeline(0),
+        m_initialized(false)
     {
 
     }
@@ -1503,11 +1508,11 @@ int main()
             ++current_simulation_time_in_ms;
 
             timelineBuilder.ProcessTimerTick(current_simulation_time_in_ms);
-            unsigned long long total_simulation_time = timelineBuilder.GetCurrentFullLengthTimeline();
+            total_simulation_time_in_ms = timelineBuilder.GetCurrentFullLengthTimeline();
             // Based on the implemented design, the length of the entire simulation is dynamic due to resource contention,
             // so we have to call GetCurrentFullLengthTimeline() after every tick is processed in order to have the latest
             // information
-            if (total_simulation_time == current_simulation_time_in_ms)
+            if (total_simulation_time_in_ms == current_simulation_time_in_ms)
             {
                 simulation_complete = true;
             }
@@ -1520,7 +1525,8 @@ int main()
 void WaitForNextSample()
 {
     clock_t before = clock();
-    while (true)
+    bool continueWait = true;
+    while (continueWait)
     {
         clock_t now = clock();
         double time = (now - before) / (double)CLOCKS_PER_SEC;
@@ -1528,7 +1534,7 @@ void WaitForNextSample()
         // Break out of loop, if approximately one ms has elapsed;
         if (time >= SAMPLING_TIME)
         {
-            break;
+            continueWait = false;
         }
     }
 }
