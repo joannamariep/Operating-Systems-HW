@@ -35,6 +35,18 @@ int main(int argc, char *argv[])
 {
     int s;
     struct sockaddr_in server;
+    int server_addr = INADDR_ANY;
+
+    if (argc > 2)
+    {
+        fprintf(stderr, "Usage: %s [optional: server IP]\n", argv[0]);
+        exit(1);
+    }
+
+    if (argc == 2)
+    {
+        server_addr = inet_addr(argv[1]);
+    }
 
     string family, person;
     int arrival, departure;

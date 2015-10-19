@@ -94,6 +94,7 @@ int main() {
         sockaddr_storage client_addr;
         socklen_t addr_len = sizeof(sockaddr_storage);
         
+        // clean up message buffer
         memset(message, 0, MAX_MESSAGE_SIZE);
         // Wait for new message, and retrieve client information
         if (recvfrom(s, message, sizeof(message), 0, (struct sockaddr *)&client_addr, &addr_len) < 0)
